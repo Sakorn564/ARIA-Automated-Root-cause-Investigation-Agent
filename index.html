@@ -3,1196 +3,851 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>ระบบแจ้งเคลมออนไลน์</title>
-
+<title>ARIA — Automated Root-cause Investigation Agent</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-
-*{
-    box-sizing:border-box;
+:root {
+  --bg:#000000;--bg-card:#131314;--card:#1F1F1F;--card-hi:#1a1a1b;
+  --sidebar:#0e0e0f;--border:#2a2a2a;--border-hi:#3A3A3A;
+  --fg:#FAFAFA;--muted:#AFB5BE;--dim:#737373;
+  --blue-b:#2168FD;--blue-light:#93C5FD;--teal:#3AE4C9;
+  --green:#4ADE80;--yellow:#FBBF24;--bad:#FB7185;
+  --grad:linear-gradient(90deg,#2168FD 0%,#1E71FA 22%,#37B1D3 55%,#39D6CB 78%,#3AE4C9 100%);
+  --grad-d:linear-gradient(135deg,#2168FD 0%,#37B1D3 50%,#3AE4C9 100%);
+  --grad-v:linear-gradient(180deg,#2168FD 0%,#3AE4C9 100%);
 }
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--fg);display:flex;-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:#222;border-radius:2px}
 
-body{
-    margin:0;
-    font-family:"Tahoma","Arial",sans-serif;
-    background:#eef3f8;
-    color:#172033;
+/* SIDEBAR */
+#sb{width:256px;min-width:256px;height:100vh;background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transition:width .28s,min-width .28s}
+#sb.col{width:0;min-width:0}
+.sb-brand{padding:16px 14px 12px;border-bottom:1px solid var(--border);position:relative}
+.sb-brand::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:var(--grad);opacity:.5}
+.aria-logo{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.aria-mark{width:36px;height:36px;border-radius:10px;background:var(--grad-d);display:flex;align-items:center;justify-content:center;box-shadow:0 0 18px rgba(33,104,253,.35);flex:none}
+.aria-mark svg{width:18px;height:18px}
+.aria-name{font-size:18px;font-weight:900;letter-spacing:-1px;background:var(--grad-d);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.aria-sub{font-size:8.5px;font-weight:600;letter-spacing:.6px;color:var(--dim);line-height:1.5}
+.wdc-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:99px;background:rgba(33,104,253,.08);border:1px solid rgba(33,104,253,.2);font-size:8.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--blue-light)}
+.wdc-pill::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--blue-light);box-shadow:0 0 5px var(--blue-light);animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+.sb-new{margin:10px 10px 5px;display:flex;align-items:center;gap:8px;padding:10px 13px;border-radius:10px;border:1px solid rgba(33,104,253,.35);background:rgba(33,104,253,.07);color:var(--blue-light);font:700 12.5px 'Manrope';cursor:pointer;transition:all .2s}
+.sb-new:hover{background:rgba(33,104,253,.14);transform:translateY(-1px)}
+
+.sb-sec{padding:12px 14px 4px;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--dim)}
+.sb-list{flex:1;overflow-y:auto;padding:0 8px 8px}
+.ci{display:flex;align-items:flex-start;gap:8px;padding:9px 10px;border-radius:10px;cursor:pointer;transition:background .15s;margin-bottom:2px;border:1px solid transparent}
+.ci:hover{background:rgba(255,255,255,.04)}
+.ci.active{background:rgba(33,104,253,.09);border-color:rgba(33,104,253,.2)}
+.cd{width:7px;height:7px;border-radius:50%;margin-top:6px;flex:none}
+.cd.open{background:var(--yellow);box-shadow:0 0 6px rgba(251,191,36,.6)}
+.cd.done{background:var(--green)}
+.cd.draft{background:var(--dim)}
+.ci-t{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ci-s{font-size:10px;color:var(--dim);margin-top:1px}
+.sb-bot{border-top:1px solid var(--border);padding:10px}
+.su{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:10px;cursor:pointer}
+.su:hover{background:rgba(255,255,255,.04)}
+.ava{width:30px;height:30px;border-radius:50%;background:var(--grad-d);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff}
+
+/* MAIN */
+#main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden;background:radial-gradient(ellipse at 15% 0%,rgba(33,104,253,.07),transparent 45%),var(--bg)}
+
+/* TOPBAR */
+#tb{height:54px;padding:0 16px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.88);backdrop-filter:blur(16px);display:flex;align-items:center;gap:9px;position:relative;z-index:10;flex:none}
+#tb::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px;background:var(--grad);opacity:.35}
+.tgl{width:32px;height:32px;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--dim);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s;padding:0;flex:none}
+.tgl:hover{background:var(--bg-card);color:var(--fg)}
+.tb-am{width:24px;height:24px;border-radius:7px;background:var(--grad-d);display:flex;align-items:center;justify-content:center;flex:none}
+.tb-am svg{width:13px;height:13px}
+.tb-n{font-size:13px;font-weight:900;letter-spacing:-.5px;background:var(--grad-d);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.tb-div{width:1px;height:16px;background:var(--border)}
+.tb-title{font-size:12.5px;font-weight:700;flex:1;color:#c4d4ee;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.tb-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:99px;font-size:9.5px;font-weight:800;letter-spacing:.5px;flex:none}
+.tb-badge.new{background:rgba(33,104,253,.1);border:1px solid rgba(33,104,253,.3);color:var(--blue-light)}
+.tb-badge.done{background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.22);color:var(--green)}
+.tb-badge.inv{background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.28);color:var(--yellow)}
+
+.tb-acts{display:flex;gap:6px}
+.ib{width:32px;height:32px;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--dim);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s;padding:0}
+.ib:hover{background:var(--bg-card);color:var(--fg)}
+
+/* HOW BANNER */
+#how{background:linear-gradient(135deg,rgba(33,104,253,.08),rgba(58,228,201,.04));border-bottom:1px solid rgba(33,104,253,.18);padding:8px 18px;display:flex;align-items:center;gap:10px;position:relative;flex:none}
+#how::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--grad-v)}
+.how-label{font-size:8.5px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--teal);white-space:nowrap}
+.how-text{font-size:11.5px;color:var(--muted);flex:1}
+.how-text strong{color:var(--fg)}
+.how-x{background:none;border:none;color:var(--dim);cursor:pointer;padding:2px;display:flex;transition:color .15s}
+.how-x:hover{color:var(--fg)}
+
+/* CHAT */
+#cw{flex:1;overflow-y:auto;padding:20px 0 8px;display:flex;flex-direction:column}
+.ci2{max-width:880px;width:100%;margin:0 auto;padding:0 18px}
+
+/* WELCOME */
+.welcome{display:flex;flex-direction:column;align-items:center;padding:36px 20px 28px;text-align:center}
+.w-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 13px;border-radius:99px;border:1px solid rgba(58,228,201,.25);background:rgba(58,228,201,.06);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--teal);margin-bottom:16px}
+.w-badge::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--teal);box-shadow:0 0 5px var(--teal);animation:blink 2s infinite}
+.w-iw{position:relative;margin-bottom:18px}
+.w-ic{width:72px;height:72px;border-radius:22px;background:linear-gradient(135deg,rgba(33,104,253,.18),rgba(58,228,201,.1));border:1px solid rgba(33,104,253,.28);display:flex;align-items:center;justify-content:center;box-shadow:0 0 50px rgba(33,104,253,.2);animation:glow 3s ease-in-out infinite}
+@keyframes glow{0%,100%{box-shadow:0 0 50px rgba(33,104,253,.2)}50%{box-shadow:0 0 70px rgba(33,104,253,.32)}}
+.w-ic svg{width:36px;height:36px}
+.orbit{position:absolute;top:50%;left:50%;width:102px;height:102px;margin:-51px 0 0 -51px;border:1px solid rgba(33,104,253,.18);border-radius:50%;animation:spin 9s linear infinite}
+.od{position:absolute;top:-3px;left:50%;width:5px;height:5px;border-radius:50%;margin-left:-2.5px;background:var(--blue-light);box-shadow:0 0 6px var(--blue-light)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.w-name{font-size:clamp(24px,4vw,34px);font-weight:900;letter-spacing:-1.2px;margin-bottom:3px;background:var(--grad-d);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.w-sub{font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
+.w-desc{font-size:13px;color:var(--muted);max-width:440px;line-height:1.75;margin-bottom:18px}
+
+/* HOW STEPS */
+.how-steps{display:grid;grid-template-columns:repeat(5,1fr);gap:0;max-width:640px;width:100%;margin-bottom:22px;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.hs{padding:12px 8px;text-align:center;border-right:1px solid var(--border);background:var(--bg-card)}
+.hs:last-child{border-right:none}
+.hs-num{width:22px;height:22px;border-radius:7px;margin:0 auto 6px;background:var(--grad-d);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;color:#fff}
+.hs-lbl{font-size:9.5px;font-weight:700;color:var(--fg);line-height:1.4}
+.hs-s{font-size:8.5px;color:var(--dim);margin-top:2px}
+
+/* EXCEL UPLOAD AREA */
+.upload-area{
+  max-width:640px;width:100%;margin-bottom:18px;
+  border:2px dashed rgba(33,104,253,.35);border-radius:14px;
+  padding:18px;background:rgba(33,104,253,.04);
+  cursor:pointer;transition:all .2s;text-align:center;position:relative;
 }
+.upload-area:hover{border-color:rgba(33,104,253,.6);background:rgba(33,104,253,.08)}
+.upload-area.drag{border-color:var(--teal);background:rgba(58,228,201,.06)}
+.upload-icon{width:40px;height:40px;margin:0 auto 10px;border-radius:12px;background:rgba(33,104,253,.12);border:1px solid rgba(33,104,253,.2);display:flex;align-items:center;justify-content:center}
+.upload-title{font-size:13px;font-weight:700;color:var(--fg);margin-bottom:4px}
+.upload-sub{font-size:11px;color:var(--dim);margin-bottom:10px}
+.upload-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:8px;background:var(--grad-d);border:none;color:#fff;font:700 11.5px 'Manrope';cursor:pointer}
+.upload-formats{display:flex;justify-content:center;gap:6px;margin-top:10px;flex-wrap:wrap}
+.fmt-tag{padding:2px 8px;border-radius:99px;border:1px solid var(--border);background:var(--bg-card);font-size:9.5px;font-weight:700;color:var(--dim)}
 
-.header{
-    background:linear-gradient(135deg,#0756b8,#0b83e6);
-    color:white;
-    padding:24px 20px;
-    text-align:center;
+/* EXCEL DATA PREVIEW */
+.excel-preview{
+  max-width:880px;width:100%;margin:0 auto 16px;padding:0 18px;
 }
+.ep-card{background:var(--bg-card);border:1px solid rgba(33,104,253,.25);border-radius:14px;overflow:hidden}
+.ep-header{padding:12px 16px;background:rgba(33,104,253,.1);border-bottom:1px solid rgba(33,104,253,.2);display:flex;align-items:center;gap:10px}
+.ep-icon{width:28px;height:28px;border-radius:8px;background:rgba(74,222,128,.15);border:1px solid rgba(74,222,128,.3);display:flex;align-items:center;justify-content:center;flex:none}
+.ep-info{flex:1}
+.ep-name{font-size:12.5px;font-weight:700;color:var(--fg)}
+.ep-meta{font-size:10px;color:var(--dim);margin-top:1px}
+.ep-close{background:none;border:none;color:var(--dim);cursor:pointer;padding:2px;display:flex;transition:color .15s}
+.ep-close:hover{color:var(--fg)}
+.ep-table-wrap{overflow-x:auto;max-height:180px;overflow-y:auto}
+.ep-table{width:100%;border-collapse:collapse;font-size:11.5px}
+.ep-table th{background:#1a2744;color:var(--blue-light);padding:8px 12px;text-align:left;font-weight:700;font-size:10px;letter-spacing:.5px;white-space:nowrap;border-bottom:1px solid var(--border)}
+.ep-table td{padding:7px 12px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--muted);white-space:nowrap}
+.ep-table tr:last-child td{border-bottom:none}
+.ep-table td.num{color:var(--blue-light);font-weight:600}
+.ep-table td.bad{color:var(--bad);font-weight:700}
+.ep-table td.ok{color:var(--green);font-weight:700}
+.ep-footer{padding:10px 16px;display:flex;align-items:center;gap:8px;border-top:1px solid var(--border)}
+.ep-stat{font-size:10.5px;color:var(--dim);flex:1}
+.analyze-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:8px;background:var(--grad-d);border:none;color:#fff;font:700 11.5px 'Manrope';cursor:pointer;transition:filter .2s}
+.analyze-btn:hover{filter:brightness(1.12)}
 
-.header h1{
-    margin:0;
-    font-size:27px;
-}
+.w-chips{display:flex;flex-wrap:wrap;gap:7px;justify-content:center}
+.chip{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg-card);color:var(--muted);font-size:12px;cursor:pointer;transition:all .18s;font-family:'Manrope',sans-serif}
+.chip:hover{border-color:rgba(33,104,253,.4);background:rgba(33,104,253,.08);color:var(--blue-light);transform:translateY(-1px)}
 
-.header p{
-    margin:6px 0 0;
-    opacity:.9;
-}
+/* MESSAGES */
+.msg{display:flex;gap:10px;margin-bottom:18px;animation:fu .3s ease both}
+@keyframes fu{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
+.msg.user{flex-direction:row-reverse}
+.mav{width:32px;height:32px;border-radius:10px;flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800}
+.msg.ai .mav{background:var(--grad-d);box-shadow:0 0 10px rgba(33,104,253,.2)}
+.msg.user .mav{background:linear-gradient(135deg,#1a3368,#4a1d8c)}
+.mbody{max-width:86%;min-width:0}
+.msg.user .mbody{align-items:flex-end;display:flex;flex-direction:column}
+.bub{padding:12px 15px;border-radius:16px;line-height:1.72;font-size:13px}
+.msg.ai .bub{background:var(--bg-card);border:1px solid var(--border);border-top-left-radius:4px;color:var(--fg)}
+.msg.user .bub{background:rgba(33,104,253,.14);border:1px solid rgba(33,104,253,.25);border-top-right-radius:4px;color:#ddeeff}
+.bub p{margin-bottom:7px}.bub p:last-child{margin-bottom:0}
+.bub strong{color:var(--blue-light)}
+.mt{font-size:9.5px;color:var(--dim);margin-top:4px;padding:0 3px}
 
-.container{
-    max-width:1000px;
-    margin:25px auto;
-    padding:0 15px;
-}
+.slab{display:flex;justify-content:space-between;font-size:9.5px;font-weight:700;letter-spacing:.5px;color:var(--dim);margin-bottom:5px}
+.slab span:last-child{color:var(--blue-light)}
+.pb{height:3px;border-radius:99px;background:var(--border);margin-bottom:12px;overflow:hidden}
+.pf{height:100%;border-radius:99px;background:var(--grad);transition:width .6s cubic-bezier(.4,0,.2,1)}
+.qr{display:flex;align-items:flex-start;gap:7px;margin:3px 0 9px}
+.qn{display:inline-flex;align-items:center;justify-content:center;width:21px;height:21px;border-radius:6px;flex:none;background:var(--grad-d);color:#fff;font-size:9.5px;font-weight:900;box-shadow:0 2px 7px rgba(33,104,253,.3)}
+.qopts{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.qo{padding:5px 12px;border-radius:99px;border:1px solid rgba(33,104,253,.25);background:rgba(33,104,253,.06);color:var(--blue-light);font:600 11px 'Manrope';cursor:pointer;transition:all .15s}
+.qo:hover{background:rgba(33,104,253,.15);border-color:var(--blue-b);transform:translateY(-1px)}
 
-.card{
-    background:white;
-    border-radius:16px;
-    padding:25px;
-    margin-bottom:20px;
-    box-shadow:0 5px 20px rgba(0,0,0,.08);
-}
+.ev-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}
+.ev-card{border:1px solid var(--border);border-radius:9px;padding:9px 11px;background:rgba(33,104,253,.04)}
+.ev-lbl{font-size:8.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dim);margin-bottom:3px}
+.ev-val{font-size:12px;color:var(--muted)}
 
-.card h2{
-    margin-top:0;
-    color:#0756b8;
-    border-bottom:2px solid #e8eef6;
-    padding-bottom:12px;
-}
+.wc{margin-top:9px}
+.wi{display:flex;align-items:flex-start;gap:9px;padding:8px 11px;border-radius:9px;margin-bottom:5px;background:rgba(0,0,0,.4);border:1px solid var(--border)}
+.wn{width:22px;height:22px;border-radius:7px;flex:none;background:var(--grad-d);color:#fff;font-size:9.5px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.wt{font-size:12px;line-height:1.5}.wt small{color:var(--dim);display:block;font-size:10.5px;margin-top:1px}
 
-.grid{
-    display:grid;
-    grid-template-columns:repeat(2,1fr);
-    gap:15px;
-}
+.ins{margin-top:11px;padding:12px 14px;border-radius:11px;background:rgba(74,222,128,.05);border:1px solid rgba(74,222,128,.2);color:#a7f3d0}
+.ins-lbl{font-size:8.5px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--green);margin-bottom:5px;display:flex;align-items:center;gap:4px}
 
-.field{
-    margin-bottom:12px;
-}
+.typing{display:flex;align-items:center;gap:4px;padding:12px 15px;background:var(--bg-card);border:1px solid var(--border);border-radius:16px;border-top-left-radius:4px;width:fit-content}
+.typing span{width:6px;height:6px;border-radius:50%;background:var(--grad-d);animation:td 1.2s ease-in-out infinite}
+.typing span:nth-child(2){animation-delay:.18s}.typing span:nth-child(3){animation-delay:.36s}
+@keyframes td{0%,80%,100%{transform:scale(.7);opacity:.4}40%{transform:scale(1.2);opacity:1}}
 
-.field.full{
-    grid-column:1/-1;
-}
+/* REPORT */
+.rw{background:#fff;border-radius:14px;overflow:hidden;margin:12px 0;box-shadow:0 8px 40px rgba(0,0,0,.5);font-family:'Manrope',sans-serif;color:#0f1419}
+.rh{background:linear-gradient(135deg,#1a3a8a,#2563eb,#0891b2);padding:20px 22px 16px;display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.rh-brand{display:flex;align-items:center;gap:7px;margin-bottom:7px}
+.rh-bm{width:26px;height:26px;border-radius:7px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center}
+.rh-bm svg{width:14px;height:14px}
+.rh-bn{font-size:12px;font-weight:800;color:rgba(255,255,255,.9)}
+.rh-title{font-size:17px;font-weight:900;color:#fff;letter-spacing:-.4px;line-height:1.3;margin-bottom:3px}
+.rh-sub{font-size:10px;color:rgba(255,255,255,.6);letter-spacing:.5px}
+.rh-date{font-size:9.5px;color:rgba(255,255,255,.5);margin-bottom:5px;text-align:right}
+.rh-stat{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;background:rgba(251,191,36,.2);border:1px solid rgba(251,191,36,.4);font-size:9.5px;font-weight:700;color:#fde68a}
 
-label{
-    display:block;
-    font-weight:bold;
-    margin-bottom:6px;
-}
+.rb{padding:20px 22px}
+.kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:18px}
+.kpi-c{padding:11px 13px;border-radius:9px;border:1px solid #e5e7eb;background:rgba(33,104,253,.03)}
+.kpi-l{font-size:8.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#6b7280;margin-bottom:3px}
+.kpi-v{font-size:17px;font-weight:900;letter-spacing:-.5px;color:#111827}
+.kpi-v.bad{color:#dc2626}.kpi-v.ok{color:#059669}
+.kpi-ch{font-size:9.5px;color:#9ca3af;margin-top:2px}
 
-input,
-textarea,
-select{
-    width:100%;
-    padding:12px;
-    border:1px solid #ccd5e0;
-    border-radius:9px;
-    font-size:15px;
-}
+.rs{margin-bottom:16px}
+.rs-t{font-size:8.5px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#2168fd;margin-bottom:9px;display:flex;align-items:center;gap:6px}
+.rs-t::after{content:'';flex:1;height:1px;background:#e5e7eb}
+.rt{font-size:12.5px;line-height:1.7;color:#374151;margin-bottom:5px}
+.rt strong{color:#1e40af;font-weight:700}
 
-textarea{
-    min-height:100px;
-    resize:vertical;
-}
+.ib2-box{padding:12px 14px;border-radius:9px;margin:8px 0;background:rgba(220,38,38,.06);border-left:3px solid #dc2626}
+.ib2-lbl{font-size:8.5px;font-weight:800;text-transform:uppercase;color:#991b1b;letter-spacing:1px}
+.ib2-v{font-size:12.5px;font-weight:700;color:#7f1d1d;margin-top:2px}
 
-.damage{
-    border:1px solid #dce4ee;
-    border-radius:12px;
-    padding:15px;
-    margin-bottom:12px;
-    background:#fafcff;
-}
+.fl{display:flex;flex-direction:column;gap:6px}
+.fi{display:flex;align-items:flex-start;gap:9px;padding:9px 11px;border-radius:8px;background:#f9fafb;border:1px solid #e5e7eb}
+.fi.key{background:rgba(33,104,253,.05);border-color:rgba(33,104,253,.2)}
+.fin{width:21px;height:21px;border-radius:6px;flex:none;background:linear-gradient(135deg,#2168fd,#37b1d3);color:#fff;font-size:9.5px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.fit{font-size:12px;line-height:1.6;color:#374151}.fit strong{color:#1e40af}
 
-.damage-title{
-    font-weight:bold;
-    color:#0756b8;
-    margin-bottom:10px;
-}
+.hb{padding:13px;border-radius:9px;margin:9px 0;background:rgba(33,104,253,.06);border:1px solid rgba(33,104,253,.2)}
+.hbl{font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#2168fd;margin-bottom:5px}
+.hbt{font-size:12.5px;line-height:1.7;color:#1e3a5f;font-weight:600}
 
-button{
-    border:none;
-    border-radius:10px;
-    padding:12px 20px;
-    font-size:15px;
-    font-weight:bold;
-    cursor:pointer;
-}
+.at{width:100%;border-collapse:separate;border-spacing:0;font-size:12px;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;margin-top:9px}
+.at th{background:#1e40af;color:#fff;padding:8px 11px;font-weight:700;font-size:9.5px;letter-spacing:.8px;text-transform:uppercase;text-align:left}
+.at td{padding:8px 11px;border-bottom:1px solid #e5e7eb;background:#fff}
+.at tr:last-child td{border-bottom:none}
+.at tr:nth-child(even) td{background:#f9fafb}
+.can{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,#2168fd,#37b1d3);color:#fff;font-size:9.5px;font-weight:900;display:inline-flex;align-items:center;justify-content:center}
+.pt{display:inline-block;padding:2px 8px;border-radius:99px;font-size:9.5px;font-weight:700;border:1px solid}
+.pt.h{background:rgba(220,38,38,.1);color:#dc2626;border-color:rgba(220,38,38,.25)}
+.pt.m{background:rgba(217,119,6,.1);color:#d97706;border-color:rgba(217,119,6,.25)}
 
-.btn-blue{
-    background:#0866d5;
-    color:white;
-}
+.rf{padding:11px 22px;background:#f9fafb;border-top:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.rf-l{font-size:9.5px;color:#9ca3af}
+.rf-acts{display:flex;gap:6px}
+.rb2{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;border-radius:7px;border:1px solid #d1d5db;background:#fff;color:#374151;font:600 11px 'Manrope';cursor:pointer;transition:all .15s}
+.rb2:hover{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}
+.rb2.pri{background:#2168fd;border-color:#2168fd;color:#fff}
+.rb2.pri:hover{background:#1d4ed8}
 
-.btn-green{
-    background:#16a36a;
-    color:white;
-}
-
-.btn-red{
-    background:#dc3545;
-    color:white;
-}
-
-.btn-gray{
-    background:#e7ebf0;
-    color:#222;
-}
-
-.buttons{
-    display:flex;
-    flex-wrap:wrap;
-    gap:10px;
-}
-
-.signature-box{
-    border:2px dashed #8aa7c7;
-    border-radius:12px;
-    background:#fbfdff;
-    padding:10px;
-}
-
-#signaturePad{
-    width:100%;
-    height:220px;
-    display:block;
-    background:white;
-    border-radius:8px;
-    touch-action:none;
-    cursor:crosshair;
-}
-
-.signature-note{
-    text-align:center;
-    color:#777;
-    margin-top:8px;
-}
-
-.signature-preview{
-    margin-top:15px;
-    display:none;
-}
-
-.signature-preview img{
-    max-width:350px;
-    border:1px solid #ddd;
-    padding:5px;
-}
-
-.file-list{
-    margin-top:10px;
-}
-
-.file-item{
-    background:#f3f6fa;
-    padding:10px;
-    border-radius:8px;
-    margin-bottom:6px;
-}
-
-.status{
-    display:flex;
-    align-items:center;
-    gap:15px;
-    padding:15px;
-    border-radius:12px;
-    background:#eef7ff;
-}
-
-.status-circle{
-    width:55px;
-    height:55px;
-    border-radius:50%;
-    background:#0866d5;
-    color:white;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    font-size:25px;
-}
-
-.progress{
-    height:12px;
-    background:#e3e8ef;
-    border-radius:20px;
-    overflow:hidden;
-    margin-top:15px;
-}
-
-.progress-bar{
-    width:25%;
-    height:100%;
-    background:#0866d5;
-}
-
-.small{
-    font-size:13px;
-    color:#6c757d;
-}
-
-.print-header{
-    display:none;
-}
-
-/* =========================
-   PRINT
-========================= */
-
-@media print{
-
-    body{
-        background:white;
-    }
-
-    .header,
-    .buttons,
-    .no-print{
-        display:none !important;
-    }
-
-    .container{
-        max-width:none;
-        margin:0;
-    }
-
-    .card{
-        box-shadow:none;
-        border:1px solid #ddd;
-        page-break-inside:avoid;
-    }
-
-    .print-header{
-        display:block;
-        text-align:center;
-        margin-bottom:20px;
-    }
-
-    .print-header h1{
-        margin:0;
-        font-size:22px;
-    }
-
-    .print-header p{
-        margin:5px 0;
-    }
-
-    input,
-    textarea,
-    select{
-        border:none;
-        padding:4px;
-    }
-
-    #signaturePad{
-        display:none;
-    }
-
-    .signature-print{
-        display:block !important;
-        max-width:300px;
-        max-height:130px;
-    }
-
-    .signature-preview{
-        display:block !important;
-    }
-}
+/* INPUT */
+#ia{border-top:1px solid var(--border);background:rgba(0,0,0,.92);backdrop-filter:blur(16px);padding:11px 18px 14px;position:relative;flex:none}
+#ia::before{content:'';position:absolute;top:-1px;left:0;right:0;height:1px;background:var(--grad);opacity:.3}
+.iw{max-width:880px;margin:0 auto;position:relative}
+.itx{width:100%;padding:11px 48px 11px 15px;border:1px solid var(--border);border-radius:12px;background:#080e20;color:var(--fg);font:13px 'Manrope',sans-serif;outline:none;resize:none;min-height:48px;max-height:140px;overflow-y:auto;scrollbar-width:none;transition:border-color .2s,box-shadow .2s;line-height:1.6}
+.itx:focus{border-color:rgba(33,104,253,.5);box-shadow:0 0 0 3px rgba(33,104,253,.09)}
+.itx::placeholder{color:var(--dim)}
+#snd{position:absolute;right:6px;bottom:6px;width:34px;height:34px;border-radius:9px;background:var(--grad-d);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s;padding:0;box-shadow:0 3px 10px rgba(33,104,253,.3)}
+#snd:hover{filter:brightness(1.15);transform:translateY(-1px)}
+#snd:disabled{opacity:.38;cursor:not-allowed;transform:none}
+.ift{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:5px}
+.ifb{display:flex;align-items:center;gap:4px;font-size:9px;color:var(--dim);font-weight:600;letter-spacing:.5px}
 
 @media(max-width:700px){
-
-    .grid{
-        grid-template-columns:1fr;
-    }
-
-    .card{
-        padding:17px;
-    }
-
-    .header h1{
-        font-size:21px;
-    }
-
-    #signaturePad{
-        height:200px;
-    }
+  #sb{position:absolute;height:100%}
+  #sb.col{transform:translateX(-100%);width:256px}
+  .ev-grid,.kpi-row{grid-template-columns:1fr}
+  .how-steps{grid-template-columns:repeat(3,1fr)}
 }
-
 </style>
 </head>
-
 <body>
 
-<div class="header">
-    <h1>INFINITY SURVEY LIMITED PARTNERSHIP</h1>
-    <p>ระบบแจ้งเคลมและรับเอกสารออนไลน์</p>
-</div>
-
-<div class="container">
-
-<div class="print-header">
-    <h1>INFINITY SURVEY LIMITED PARTNERSHIP</h1>
-    <p>เอกสารแจ้งเคลมออนไลน์</p>
-</div>
-
-<!-- ===================== -->
-<!-- CLAIM INFORMATION -->
-<!-- ===================== -->
-
-<div class="card">
-
-<h2>📄 เอกสารแจ้งเคลมเพิ่มเติม</h2>
-
-<div class="grid">
-
-<div class="field">
-<label>เลขรับแจ้ง</label>
-<input id="claimNo" placeholder="เช่น 09XXXXXX">
-</div>
-
-<div class="field">
-<label>เลขกรมธรรม์</label>
-<input id="policyNo">
-</div>
-
-<div class="field">
-<label>เลขเคลม</label>
-<input id="caseNo">
-</div>
-
-<div class="field">
-<label>วันที่เกิดเหตุ</label>
-<input id="incidentDate" type="date">
-</div>
-
-<div class="field">
-<label>เวลาเกิดเหตุ</label>
-<input id="incidentTime" type="time">
-</div>
-
-<div class="field">
-<label>สถานที่เกิดเหตุ</label>
-<input id="location">
-</div>
-
-<div class="field full">
-<label>ลักษณะการเกิดอุบัติเหตุ</label>
-<textarea id="incidentDetail"
-placeholder="กรอกรายละเอียดเหตุการณ์"></textarea>
-</div>
-
-</div>
-
-</div>
-
-<!-- ===================== -->
-<!-- VEHICLE -->
-<!-- ===================== -->
-
-<div class="card">
-
-<h2>🚗 ข้อมูลรถ / ทรัพย์สิน</h2>
-
-<div class="grid">
-
-<div class="field">
-<label>ยี่ห้อ</label>
-<input id="brand" placeholder="เช่น TOYOTA">
-</div>
-
-<div class="field">
-<label>รุ่น</label>
-<input id="model">
-</div>
-
-<div class="field">
-<label>ทะเบียน</label>
-<input id="plate">
-</div>
-
-<div class="field">
-<label>จังหวัด</label>
-<input id="province">
-</div>
-
-<div class="field">
-<label>ประเภทประกัน</label>
-
-<select id="insuranceType">
-
-<option value="">-- เลือก --</option>
-<option>ประกันภัยชั้น 1</option>
-<option>ประกันภัยชั้น 2+</option>
-<option>ประกันภัยชั้น 3+</option>
-<option>ประกันภัยชั้น 3</option>
-<option>อื่น ๆ</option>
-
-</select>
-
-</div>
-
-<div class="field">
-<label>เลขกรมธรรม์บริษัท</label>
-<input id="companyPolicy">
-</div>
-
-</div>
-
-</div>
-
-<!-- ===================== -->
-<!-- DAMAGE -->
-<!-- ===================== -->
-
-<div class="card">
-
-<h2>🔧 รายการความเสียหาย</h2>
-
-<div id="damageContainer"></div>
-
-<button class="btn-blue no-print" onclick="addDamage()">
-+ เพิ่มรายการความเสียหาย
-</button>
-
-</div>
-
-<!-- ===================== -->
-<!-- EVIDENCE -->
-<!-- ===================== -->
-
-<div class="card">
-
-<h2>📎 หลักฐานยืนยันความเสียหาย</h2>
-
-<p class="small">
-สามารถเลือกภาพถ่ายหรือเอกสารจากโทรศัพท์ / คอมพิวเตอร์
-</p>
-
-<input
-    id="files"
-    type="file"
-    multiple
-    accept="image/*,.pdf,.doc,.docx"
->
-
-<div id="fileList" class="file-list"></div>
-
-</div>
-
-<!-- ===================== -->
-<!-- SIGNATURE -->
-<!-- ===================== -->
-
-<div class="card">
-
-<h2>✍️ ลงลายเซ็นออนไลน์</h2>
-
-<p>
-ใช้นิ้วมือ เมาส์ หรือปากกาเขียนลายเซ็นในช่องด้านล่าง
-</p>
-
-<div class="signature-box">
-
-<canvas
-    id="signaturePad"
-    aria-label="พื้นที่สำหรับลงลายเซ็นออนไลน์">
-</canvas>
-
-<div class="signature-note">
-✍️ กรุณาเซ็นชื่อในกรอบนี้
-</div>
-
-</div>
-
-<br>
-
-<div class="buttons no-print">
-
-<button class="btn-red" onclick="clearSignature()">
-🗑 ล้างลายเซ็น
-</button>
-
-<button class="btn-green" onclick="saveSignature()">
-💾 บันทึกลายเซ็น
-</button>
-
-</div>
-
-<div class="signature-preview" id="signaturePreview">
-
-<p><b>ลายเซ็นที่บันทึก:</b></p>
-
-<img
-    id="signatureImage"
-    class="signature-print"
-    alt="ลายเซ็น"
->
-
-</div>
-
-</div>
-
-<!-- ===================== -->
-<!-- PERSON -->
-<!-- ===================== -->
-
-<div class="card">
-
-<h2>👤 ผู้แจ้ง / ผู้รับรอง</h2>
-
-<div class="grid">
-
-<div class="field">
-<label>ชื่อผู้แจ้ง</label>
-<input id="reporter">
-</div>
-
-<div class="field">
-<label>เบอร์โทรศัพท์</label>
-<input id="phone">
-</div>
-
-<div class="field">
-<label>ชื่อผู้รับหลักฐาน / ผู้รับรอง</label>
-<input id="receiver">
-</div>
-
-<div class="field">
-<label>วันที่รับเอกสาร</label>
-<input id="receiveDate" type="date">
-</div>
-
-</div>
-
-</div>
-
-<!-- ===================== -->
-<!-- STATUS -->
-<!-- ===================== -->
-
-<div class="card">
-
-<h2>📊 ติดตามสถานะการเคลม</h2>
-
-<div class="status">
-
-<div class="status-circle">
-✓
-</div>
-
-<div>
-
-<strong id="statusText">
-รับข้อมูลเบื้องต้นแล้ว
-</strong>
-
-<p class="small">
-เลขเคลม:
-<span id="statusClaim">-</span>
-</p>
-
-</div>
-
-</div>
-
-<div class="progress">
-
-<div class="progress-bar"></div>
-
-</div>
-
-</div>
-
-<!-- ===================== -->
-<!-- BUTTONS -->
-<!-- ===================== -->
-
-<div class="card no-print">
-
-<h2>⚙️ จัดการเอกสาร</h2>
-
-<div class="buttons">
-
-<button
-class="btn-green"
-onclick="saveForm()">
-💾 บันทึกข้อมูล
-</button>
-
-<button
-class="btn-blue"
-onclick="window.print()">
-🖨️ พิมพ์ / Save PDF
-</button>
-
-<button
-class="btn-gray"
-onclick="loadForm()">
-↻ โหลดข้อมูลที่บันทึก
-</button>
-
-<button
-class="btn-red"
-onclick="clearForm()">
-ล้างข้อมูล
-</button>
-
-</div>
-
-<br>
-
-<p class="small">
-เมื่อต้องการสร้าง PDF ให้กด "พิมพ์ / Save PDF"
-แล้วเลือกเครื่องพิมพ์เป็น "Save as PDF"
-</p>
-
-</div>
-
+<!-- SIDEBAR -->
+<aside id="sb">
+  <div class="sb-brand">
+    <div class="aria-logo">
+      <div class="aria-mark">
+        <svg fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35M11 8v3l2 1.5"/>
+        </svg>
+      </div>
+      <div>
+        <div class="aria-name">ARIA</div>
+        <div class="aria-sub">Automated Root-cause<br>Investigation Agent</div>
+      </div>
+    </div>
+    <div class="wdc-pill">WD AI Agent Challenge 2026</div>
+  </div>
+  <button class="sb-new" onclick="newCase()">
+    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+    New Investigation
+  </button>
+  <div class="sb-sec">ประวัติเคส</div>
+  <div class="sb-list" id="sbl">
+    <div class="ci active">
+      <div class="cd open"></div>
+      <div><div class="ci-t">SEW Hyper Balance Yield Drop</div><div class="ci-s">กำลังวิเคราะห์ · Now</div></div>
+    </div>
+    <div class="ci">
+      <div class="cd done"></div>
+      <div><div class="ci-t">Vibration Test Fail — Line 3</div><div class="ci-s">ปิดแล้ว · 05/06/2026</div></div>
+    </div>
+    <div class="ci">
+      <div class="cd done"></div>
+      <div><div class="ci-t">Torque Spec Deviation NPI</div><div class="ci-s">ปิดแล้ว · 01/06/2026</div></div>
+    </div>
+    <div class="ci">
+      <div class="cd draft"></div>
+      <div><div class="ci-t">Particle Contamination Zone 4</div><div class="ci-s">Draft · 28/05/2026</div></div>
+    </div>
+  </div>
+  <div class="sb-bot">
+    <div class="su">
+      <div class="ava">W</div>
+      <div style="font-size:11px"><b style="display:block;font-size:12px">WD Engineer</b><small style="color:var(--dim)">Quality Team · BKK Plant</small></div>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div id="main">
+  <!-- TOPBAR -->
+  <div id="tb">
+    <button class="tgl" onclick="toggleSB()">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <div class="tb-am">
+      <svg fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35M11 8v3l2 1.5"/>
+      </svg>
+    </div>
+    <span class="tb-n">ARIA</span>
+    <div class="tb-div"></div>
+    <div class="tb-title" id="tbt">New Investigation</div>
+    <div id="tbb" class="tb-badge new">
+      <svg width="6" height="6" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="currentColor"/></svg>
+      New Case
+    </div>
+    <div class="tb-acts">
+      <button class="ib" onclick="importExcel()" title="Import Excel">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <path d="M3 9h18M3 15h18M9 3v18"/>
+        </svg>
+      </button>
+      <button class="ib" title="Export">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path d="M12 16V4m0 12l-4-4m4 4l4-4M4 20h16"/></svg>
+      </button>
+      <button class="ib" title="Info">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- HOW BANNER -->
+  <div id="how">
+    <div class="how-label">How ARIA Works</div>
+    <div class="how-text"><strong>5 ขั้นตอน:</strong> รับปัญหา → เก็บข้อมูล → Fishbone → 5 Why → สร้าง Report · หรือ <strong>Import Excel</strong> เพื่อ Auto-analyze ทันที</div>
+    <button class="how-x" onclick="document.getElementById('how').style.display='none'">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <!-- CHAT -->
+  <div id="cw">
+    <div class="ci2" id="chat">
+      <div class="welcome" id="ws">
+        <div class="w-badge">WD AI Agent Challenge 2026</div>
+        <div class="w-iw">
+          <div class="orbit"><div class="od"></div></div>
+          <div class="w-ic">
+            <svg fill="none" stroke="#93C5FD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35M11 8v3l2 1.5"/>
+            </svg>
+          </div>
+        </div>
+        <div class="w-name">ARIA</div>
+        <div class="w-sub">Automated Root-cause Investigation Agent</div>
+        <p class="w-desc">อธิบายปัญหา หรือ <strong style="color:var(--teal)">Import Excel</strong> เพื่อให้ ARIA วิเคราะห์ข้อมูลอัตโนมัติ</p>
+
+        <div class="how-steps">
+          <div class="hs">
+            <div class="hs-num">1</div>
+            <div class="hs-lbl">รับปัญหา</div>
+            <div class="hs-s">Describe</div>
+          </div>
+          <div class="hs">
+            <div class="hs-num">2</div>
+            <div class="hs-lbl">เก็บข้อมูล</div>
+            <div class="hs-s">5 Questions</div>
+          </div>
+          <div class="hs">
+            <div class="hs-num">3</div>
+            <div class="hs-lbl">Fishbone</div>
+            <div class="hs-s">4M Analysis</div>
+          </div>
+          <div class="hs">
+            <div class="hs-num">4</div>
+            <div class="hs-lbl">5 Why</div>
+            <div class="hs-s">Root Cause</div>
+          </div>
+          <div class="hs" style="border-right:none">
+            <div class="hs-num" style="background:linear-gradient(135deg,#059669,#3AE4C9)">5</div>
+            <div class="hs-lbl">Report</div>
+            <div class="hs-s">Auto PDF</div>
+          </div>
+        </div>
+
+        <!-- EXCEL UPLOAD -->
+        <div class="upload-area" id="dropZone"
+          onclick="document.getElementById('fileInput').click()"
+          ondragover="onDragOver(event)"
+          ondragleave="onDragLeave(event)"
+          ondrop="onDrop(event)">
+          <div class="upload-icon">
+            <svg width="20" height="20" fill="none" stroke="#93C5FD" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <path d="M3 9h18M3 15h18M9 3v18"/>
+            </svg>
+          </div>
+          <div class="upload-title">Import Excel / CSV Data</div>
+          <div class="upload-sub">ลาก-วางไฟล์ที่นี่ หรือคลิกเพื่อเลือกไฟล์</div>
+          <button class="upload-btn" onclick="event.stopPropagation();document.getElementById('fileInput').click()">
+            <svg width="12" height="12" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+            เลือกไฟล์
+          </button>
+          <div class="upload-formats">
+            <span class="fmt-tag">.xlsx</span>
+            <span class="fmt-tag">.xls</span>
+            <span class="fmt-tag">.csv</span>
+            <span class="fmt-tag">.tsv</span>
+          </div>
+          <input type="file" id="fileInput" accept=".xlsx,.xls,.csv,.tsv" style="display:none" onchange="handleFile(this.files[0])">
+        </div>
+
+        <div class="w-chips">
+          <div class="chip" onclick="go('SEW Hyper balance 1st pass yield drop หลังเปลี่ยน top clamp screw Supplier')">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Hyper balance yield drop
+          </div>
+          <div class="chip" onclick="go('Production defect rate increased above threshold')">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/></svg>
+            Defect rate increase
+          </div>
+          <div class="chip" onclick="go('Vibration test fail เกิน spec ที่กำหนด')">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/><path d="M12 6v6l4 2"/></svg>
+            Vibration test fail
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INPUT -->
+  <div id="ia">
+    <div class="iw">
+      <textarea class="itx" id="inp" placeholder="อธิบายปัญหา หรือตอบคำถาม ARIA..." rows="1"
+        onkeydown="handleKey(event)" oninput="autoR(this)"></textarea>
+      <button id="snd" onclick="send()">
+        <svg width="14" height="14" fill="none" stroke="white" stroke-width="2.2" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/></svg>
+      </button>
+    </div>
+    <div class="ift">
+      <div class="ifb">
+        <svg width="9" height="9" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        WD Internal Only
+      </div>
+      <div class="ifb">
+        <svg width="9" height="9" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2 2"/></svg>
+        Powered by WD Chat
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
+/* ── State ── */
+let sbOpen=true, step=0, started=false, busy=false;
+let D={}, excelData=null;
 
-/* =====================================
-   SIGNATURE PAD
-===================================== */
+const ts=()=>{const d=new Date();return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')};
 
-const canvas =
-document.getElementById("signaturePad");
+const QS=[
+  {q:'ปัญหานี้เริ่มเกิดขึ้นตั้งแต่เมื่อไหร่ครับ?',opts:['ใน 3 วันที่ผ่านมา','ใน 1 สัปดาห์','มากกว่า 2 สัปดาห์']},
+  {q:'Line ไหนที่พบปัญหาหลักครับ?',opts:['HDA Line P5','HDA Line P1/P2','ทั้ง 2 Line']},
+  {q:'Defect Rate ปัจจุบันเป็นเท่าไหร่ เทียบ baseline?',opts:['Drop 1–2%','Drop 3–5%','มากกว่า 5%']},
+  {q:'มีการเปลี่ยนแปลงอะไรก่อนพบปัญหาครับ?',opts:['เปลี่ยน Supplier','PM เครื่องจักร','เปลี่ยน Operator']},
+  {q:'ลักษณะ Defect เป็นอย่างไรครับ?',opts:['Contact surface ไม่สมบูรณ์','Dimension ผิด spec','Surface profile ต่างกัน']},
+];
 
-const ctx =
-canvas.getContext("2d");
+/* ── Sidebar ── */
+function toggleSB(){sbOpen=!sbOpen;document.getElementById('sb').classList.toggle('col',!sbOpen)}
 
-let drawing = false;
+/* ── File Upload ── */
+function importExcel(){document.getElementById('fileInput').click()}
 
-function resizeCanvas(){
-
-    const ratio =
-        Math.max(window.devicePixelRatio || 1,1);
-
-    const rect =
-        canvas.getBoundingClientRect();
-
-    canvas.width =
-        rect.width * ratio;
-
-    canvas.height =
-        rect.height * ratio;
-
-    ctx.scale(ratio,ratio);
-
-    ctx.lineWidth = 2.5;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.strokeStyle = "#111";
-
+function onDragOver(e){e.preventDefault();document.getElementById('dropZone').classList.add('drag')}
+function onDragLeave(e){document.getElementById('dropZone').classList.remove('drag')}
+function onDrop(e){
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('drag');
+  const f=e.dataTransfer.files[0];
+  if(f)handleFile(f);
 }
 
-resizeCanvas();
-
-window.addEventListener("resize",resizeCanvas);
-
-
-/* Pointer Events
-   รองรับ Mouse + Touch + Pen
-*/
-
-function getPosition(e){
-
-    const rect =
-        canvas.getBoundingClientRect();
-
-    return {
-        x:e.clientX - rect.left,
-        y:e.clientY - rect.top
-    };
-
-}
-
-canvas.addEventListener("pointerdown",function(e){
-
-    drawing=true;
-
-    const p=getPosition(e);
-
-    ctx.beginPath();
-    ctx.moveTo(p.x,p.y);
-
-    canvas.setPointerCapture(e.pointerId);
-
-});
-
-canvas.addEventListener("pointermove",function(e){
-
-    if(!drawing)return;
-
-    const p=getPosition(e);
-
-    ctx.lineTo(p.x,p.y);
-    ctx.stroke();
-
-});
-
-canvas.addEventListener("pointerup",function(){
-
-    drawing=false;
-
-});
-
-canvas.addEventListener("pointercancel",function(){
-
-    drawing=false;
-
-});
-
-
-/* =====================================
-   CLEAR SIGNATURE
-===================================== */
-
-function clearSignature(){
-
-    ctx.clearRect(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-    );
-
-    document.getElementById(
-        "signaturePreview"
-    ).style.display="none";
-
-}
-
-
-/* =====================================
-   SAVE SIGNATURE
-===================================== */
-
-function saveSignature(){
-
-    const image =
-        canvas.toDataURL("image/png");
-
-    localStorage.setItem(
-        "claimSignature",
-        image
-    );
-
-    document.getElementById(
-        "signatureImage"
-    ).src=image;
-
-    document.getElementById(
-        "signaturePreview"
-    ).style.display="block";
-
-    alert("บันทึกลายเซ็นเรียบร้อยแล้ว");
-
-}
-
-
-/* =====================================
-   LOAD SIGNATURE
-===================================== */
-
-function loadSignature(){
-
-    const image =
-        localStorage.getItem("claimSignature");
-
-    if(image){
-
-        document.getElementById(
-            "signatureImage"
-        ).src=image;
-
-        document.getElementById(
-            "signaturePreview"
-        ).style.display="block";
-
+function handleFile(file){
+  if(!file)return;
+  const ext=file.name.split('.').pop().toLowerCase();
+  if(!['xlsx','xls','csv','tsv'].includes(ext)){
+    alert('รองรับเฉพาะ .xlsx .xls .csv .tsv เท่านั้นครับ');
+    return;
+  }
+  const reader=new FileReader();
+  reader.onload=function(e){
+    if(ext==='csv'||ext==='tsv'){
+      const delimiter=ext==='tsv'?'\t':',';
+      parseCSV(e.target.result,delimiter,file.name);
+    } else {
+      parseExcelBinary(e.target.result,file.name);
     }
-
+  };
+  if(ext==='csv'||ext==='tsv') reader.readAsText(file);
+  else reader.readAsBinaryString(file);
 }
 
+function parseCSV(text,delimiter,filename){
+  const rows=text.trim().split('\n').map(r=>r.split(delimiter).map(c=>c.replace(/^"|"$/g,'').trim()));
+  if(rows.length<2){alert('ไฟล์ว่างเปล่าหรือไม่มีข้อมูลครับ');return;}
+  excelData={filename,headers:rows[0],rows:rows.slice(1),rowCount:rows.length-1};
+  showExcelPreview(excelData);
+}
 
-/* =====================================
-   DAMAGE ITEMS
-===================================== */
+function parseExcelBinary(binary,filename){
+  // Simple binary parser for demonstration
+  // In production, use SheetJS library
+  const mockData={
+    filename,
+    headers:['Date','Line','Product','Defect Type','Defect Rate (%)','Supplier','Lot No.','Action'],
+    rows:[
+      ['2026-06-06','HDA P5','SEW','Hyper Balance Fail','1.96','Unisteel','L2025-1201','Under Investigation'],
+      ['2026-06-07','HDA P5','SEW','Hyper Balance Fail','1.78','Unisteel','L2025-1201','Under Investigation'],
+      ['2026-06-08','HDA P1','SEW','Hyper Balance Fail','0.45','Katayama','L2025-1198','Normal'],
+      ['2026-06-09','HDA P5','SEW','Hyper Balance Fail','2.01','Unisteel','L2025-1205','Escalated'],
+      ['2026-06-10','HDA P2','SEW','Hyper Balance Fail','0.52','Katayama','L2025-1202','Normal'],
+    ],
+    rowCount:5
+  };
+  excelData=mockData;
+  showExcelPreview(excelData);
+}
 
-let damageCount=0;
+function showExcelPreview(data){
+  // Remove welcome if present
+  document.getElementById('ws')?.remove();
 
-function addDamage(){
+  // Remove old preview
+  document.getElementById('ep')?.remove();
 
-    damageCount++;
+  const wrap=document.getElementById('chat-wrap')||document.getElementById('cw');
+  const preview=document.createElement('div');
+  preview.className='excel-preview';
+  preview.id='ep';
 
-    const div=
-    document.createElement("div");
+  const defRates=data.rows.map(r=>{
+    const v=parseFloat(r[data.headers.indexOf('Defect Rate (%)')]);
+    return isNaN(v)?0:v;
+  }).filter(v=>v>0);
+  const avgRate=defRates.length?(defRates.reduce((a,b)=>a+b,0)/defRates.length).toFixed(2):0;
+  const maxRate=defRates.length?Math.max(...defRates).toFixed(2):0;
 
-    div.className="damage";
-
-    div.innerHTML=`
-
-        <div class="damage-title">
-        รายการความเสียหาย ${damageCount}
+  preview.innerHTML=`
+    <div class="ep-card">
+      <div class="ep-header">
+        <div class="ep-icon">
+          <svg width="14" height="14" fill="none" stroke="#4ADE80" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <path d="M3 9h18M3 15h18M9 3v18"/>
+          </svg>
         </div>
-
-        <div class="grid">
-
-            <div class="field">
-                <label>ชิ้นส่วน / รายการ</label>
-                <input
-                class="damage-name"
-                placeholder="เช่น กันชนหน้า">
-            </div>
-
-            <div class="field">
-                <label>ประมาณการค่าเสียหาย (บาท)</label>
-                <input
-                class="damage-cost"
-                type="number"
-                placeholder="0">
-            </div>
-
-            <div class="field full">
-                <label>รายละเอียด</label>
-                <textarea
-                class="damage-detail"
-                placeholder="รายละเอียดความเสียหาย"></textarea>
-            </div>
-
+        <div class="ep-info">
+          <div class="ep-name">${data.filename}</div>
+          <div class="ep-meta">${data.rowCount} rows · ${data.headers.length} columns · Avg defect rate: ${avgRate}% · Max: ${maxRate}%</div>
         </div>
+        <button class="ep-close" onclick="document.getElementById('ep').remove()">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="ep-table-wrap">
+        <table class="ep-table">
+          <thead><tr>${data.headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+          <tbody>${data.rows.slice(0,8).map(row=>`<tr>${row.map((c,i)=>{
+            let cls='';
+            const h=data.headers[i]||'';
+            if(h.includes('Rate')){
+              const v=parseFloat(c);
+              cls=v>1.5?' bad':v>0?' num':'';
+            }
+            if(c==='Normal') cls=' ok';
+            if(c==='Escalated'||c==='Under Investigation') cls=' bad';
+            return `<td class="${cls.trim()}">${c}</td>`;
+          }).join('')}</tr>`).join('')}</tbody>
+        </table>
+      </div>
+      <div class="ep-footer">
+        <div class="ep-stat">${data.rowCount} records imported · Ready for ARIA analysis</div>
+        <button class="analyze-btn" onclick="analyzeExcel()">
+          <svg width="12" height="12" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/>
+          </svg>
+          Analyze with ARIA
+        </button>
+      </div>
+    </div>`;
 
-    `;
-
-    document
-    .getElementById("damageContainer")
-    .appendChild(div);
-
+  document.getElementById('chat').insertBefore(preview, document.getElementById('chat').firstChild);
+  scrollBottom();
 }
 
+function analyzeExcel(){
+  if(!excelData)return;
+  document.getElementById('ep')?.remove();
+  started=true;
+  step=0;
 
-/* สร้างรายการเริ่มต้น */
+  // Compute stats from data
+  const rateCol=excelData.headers.indexOf('Defect Rate (%)');
+  const lineCol=excelData.headers.indexOf('Line');
+  const supplierCol=excelData.headers.indexOf('Supplier');
+  const rates=excelData.rows.map(r=>parseFloat(r[rateCol])||0).filter(v=>v>0);
+  const avgRate=(rates.reduce((a,b)=>a+b,0)/rates.length).toFixed(2);
+  const maxRate=Math.max(...rates).toFixed(2);
+  const unisteel=excelData.rows.filter(r=>r[supplierCol]==='Unisteel');
+  const kata=excelData.rows.filter(r=>r[supplierCol]==='Katayama');
+  const uAvg=unisteel.length?(unisteel.map(r=>parseFloat(r[rateCol])||0).reduce((a,b)=>a+b,0)/unisteel.length).toFixed(2):0;
+  const kAvg=kata.length?(kata.map(r=>parseFloat(r[rateCol])||0).reduce((a,b)=>a+b,0)/kata.length).toFixed(2):0;
 
-addDamage();
-addDamage();
-addDamage();
+  D.problem=`Hyper balance defect rate ${avgRate}% (ข้อมูลจาก Excel: ${excelData.filename})`;
+  D.excelSummary={avgRate,maxRate,uAvg,kAvg,rows:excelData.rowCount};
 
+  document.getElementById('tbt').textContent=excelData.filename;
+  setBadge('inv','Investigating');
 
-/* =====================================
-   FILE UPLOAD
-===================================== */
-
-document
-.getElementById("files")
-.addEventListener("change",function(){
-
-    const list =
-        document.getElementById("fileList");
-
-    list.innerHTML="";
-
-    Array.from(this.files).forEach(file=>{
-
-        const div =
-            document.createElement("div");
-
-        div.className="file-item";
-
-        div.innerHTML=
-        "📎 <b>"+file.name+"</b> ("+
-        Math.round(file.size/1024)+
-        " KB)";
-
-        list.appendChild(div);
-
-    });
-
-});
-
-
-/* =====================================
-   COLLECT FORM
-===================================== */
-
-function getFormData(){
-
-    const damages=[];
-
-    document
-    .querySelectorAll(".damage")
-    .forEach(item=>{
-
-        damages.push({
-
-            name:
-            item.querySelector(
-            ".damage-name").value,
-
-            cost:
-            item.querySelector(
-            ".damage-cost").value,
-
-            detail:
-            item.querySelector(
-            ".damage-detail").value
-
-        });
-
-    });
-
-
-    return {
-
-        claimNo:
-        document.getElementById("claimNo").value,
-
-        policyNo:
-        document.getElementById("policyNo").value,
-
-        caseNo:
-        document.getElementById("caseNo").value,
-
-        incidentDate:
-        document.getElementById("incidentDate").value,
-
-        incidentTime:
-        document.getElementById("incidentTime").value,
-
-        location:
-        document.getElementById("location").value,
-
-        incidentDetail:
-        document.getElementById("incidentDetail").value,
-
-        brand:
-        document.getElementById("brand").value,
-
-        model:
-        document.getElementById("model").value,
-
-        plate:
-        document.getElementById("plate").value,
-
-        province:
-        document.getElementById("province").value,
-
-        insuranceType:
-        document.getElementById("insuranceType").value,
-
-        companyPolicy:
-        document.getElementById("companyPolicy").value,
-
-        reporter:
-        document.getElementById("reporter").value,
-
-        phone:
-        document.getElementById("phone").value,
-
-        receiver:
-        document.getElementById("receiver").value,
-
-        receiveDate:
-        document.getElementById("receiveDate").value,
-
-        damages:damages,
-
-        signature:
-        localStorage.getItem("claimSignature") || ""
-
-    };
-
+  addUser(`Import: ${excelData.filename} (${excelData.rowCount} records)`);
+  doType(()=>{
+    addAI(`
+      <div class="slab"><span>Excel Import — Auto Analysis</span><span>100%</span></div>
+      <div class="pb"><div class="pf" style="width:100%"></div></div>
+      <p>ARIA วิเคราะห์ข้อมูลจาก Excel <strong>${excelData.filename}</strong> เสร็จแล้วครับ</p>
+      <div class="ev-grid">
+        <div class="ev-card"><div class="ev-lbl">Avg Defect Rate</div><div class="ev-val" style="color:var(--bad);font-weight:700">${avgRate}%</div></div>
+        <div class="ev-card"><div class="ev-lbl">Max Defect Rate</div><div class="ev-val" style="color:var(--bad);font-weight:700">${maxRate}%</div></div>
+        <div class="ev-card"><div class="ev-lbl">Unisteel Avg</div><div class="ev-val" style="color:var(--bad);font-weight:700">${uAvg}%</div></div>
+        <div class="ev-card"><div class="ev-lbl">Katayama Avg</div><div class="ev-val" style="color:var(--green);font-weight:700">${kAvg}%</div></div>
+      </div>
+      <p style="margin-top:11px;font-size:12.5px">พบ <strong>Yield Gap ${(parseFloat(uAvg)-parseFloat(kAvg)).toFixed(2)}%</strong> ระหว่าง Unisteel vs Katayama</p>
+      <div class="qopts">
+        <div class="qo" onclick="qr('สร้าง Full RCA Report จากข้อมูล Excel ได้เลย')">สร้าง Full RCA Report</div>
+        <div class="qo" onclick="qr('ขอดู Fishbone Analysis ก่อน')">ดู Fishbone ก่อน</div>
+      </div>`);
+    step=99;
+  });
 }
 
-
-/* =====================================
-   SAVE FORM
-===================================== */
-
-function saveForm(){
-
-    const data=getFormData();
-
-    localStorage.setItem(
-        "claimFormData",
-        JSON.stringify(data)
-    );
-
-    document.getElementById(
-        "statusClaim"
-    ).innerText=
-        data.caseNo || data.claimNo || "-";
-
-    alert(
-        "บันทึกข้อมูลเรียบร้อยแล้ว"
-    );
-
+/* ── Chat flow ── */
+function go(problem){
+  document.getElementById('ws')?.remove();
+  document.getElementById('ep')?.remove();
+  started=true;
+  D.problem=problem;
+  addUser(problem);
+  doType(()=>{
+    addAI(`
+      <div class="slab"><span>ขั้นตอน 1 / 5 — รับปัญหา</span><span>20%</span></div>
+      <div class="pb"><div class="pf" style="width:20%"></div></div>
+      <p>รับทราบแล้วครับ — ARIA จะสืบสวน <strong>"${problem}"</strong></p>
+      <div class="qr"><span class="qn">1</span><span><strong>${QS[0].q}</strong></span></div>
+      <div class="qopts">${QS[0].opts.map(o=>`<div class="qo" onclick="qr('${o}')">${o}</div>`).join('')}</div>`);
+    step=1;
+    document.getElementById('tbt').textContent=problem.length>40?problem.substring(0,40)+'…':problem;
+    setBadge('inv','Investigating');
+  });
 }
 
+function qr(t){document.getElementById('inp').value=t;send()}
 
-/* =====================================
-   LOAD FORM
-===================================== */
+function send(){
+  const inp=document.getElementById('inp');
+  const t=inp.value.trim();
+  if(!t||busy)return;
+  if(!started){go(t);inp.value='';return}
+  document.getElementById('ws')?.remove();
+  addUser(t);
+  inp.value='';
+  inp.style.height='auto';
+  D[`a${step}`]=t;
 
-function loadForm(){
-
-    const raw=
-        localStorage.getItem(
-        "claimFormData");
-
-    if(!raw){
-
-        alert("ยังไม่มีข้อมูลที่บันทึกไว้");
-
-        return;
-
+  doType(()=>{
+    if(step===99){
+      addAI(buildReport(true));
+      setBadge('done','Complete');
+    } else if(step<5){
+      const pct=Math.round((step+1)/5*100);
+      const q=QS[step];
+      addAI(`
+        <div class="slab"><span>ขั้นตอน ${step+1} / 5</span><span>${pct}%</span></div>
+        <div class="pb"><div class="pf" style="width:${pct}%"></div></div>
+        <p>บันทึกแล้ว: <strong>${t}</strong></p>
+        <div class="qr"><span class="qn">${step+1}</span><span><strong>${q.q}</strong></span></div>
+        <div class="qopts">${q.opts.map(o=>`<div class="qo" onclick="qr('${o}')">${o}</div>`).join('')}</div>`);
+      step++;
+    } else {
+      addAI(buildReport(false));
+      setBadge('done','Complete');
     }
-
-    const data=
-        JSON.parse(raw);
-
-
-    document.getElementById("claimNo").value=
-        data.claimNo || "";
-
-    document.getElementById("policyNo").value=
-        data.policyNo || "";
-
-    document.getElementById("caseNo").value=
-        data.caseNo || "";
-
-    document.getElementById("incidentDate").value=
-        data.incidentDate || "";
-
-    document.getElementById("incidentTime").value=
-        data.incidentTime || "";
-
-    document.getElementById("location").value=
-        data.location || "";
-
-    document.getElementById("incidentDetail").value=
-        data.incidentDetail || "";
-
-    document.getElementById("brand").value=
-        data.brand || "";
-
-    document.getElementById("model").value=
-        data.model || "";
-
-    document.getElementById("plate").value=
-        data.plate || "";
-
-    document.getElementById("province").value=
-        data.province || "";
-
-    document.getElementById("insuranceType").value=
-        data.insuranceType || "";
-
-    document.getElementById("companyPolicy").value=
-        data.companyPolicy || "";
-
-    document.getElementById("reporter").value=
-        data.reporter || "";
-
-    document.getElementById("phone").value=
-        data.phone || "";
-
-    document.getElementById("receiver").value=
-        data.receiver || "";
-
-    document.getElementById("receiveDate").value=
-        data.receiveDate || "";
-
-
-    if(data.signature){
-
-        localStorage.setItem(
-            "claimSignature",
-            data.signature
-        );
-
-        loadSignature();
-
-    }
-
-
-    document.getElementById(
-        "statusClaim"
-    ).innerText=
-        data.caseNo || data.claimNo || "-";
-
-
-    alert("โหลดข้อมูลเรียบร้อยแล้ว");
-
+  });
 }
 
-
-/* =====================================
-   CLEAR FORM
-===================================== */
-
-function clearForm(){
-
-    if(!confirm(
-        "ต้องการล้างข้อมูลทั้งหมดหรือไม่?"
-    )) return;
-
-    localStorage.removeItem(
-        "claimFormData");
-
-    localStorage.removeItem(
-        "claimSignature");
-
-    location.reload();
-
+function buildReport(fromExcel){
+  const ex=D.excelSummary||{avgRate:'1.96',uAvg:'1.92',kAvg:'0.49',rows:5};
+  const d=new Date();
+  const dateStr=`${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()+543}`;
+  return `<div class="rw">
+    <div class="rh">
+      <div>
+        <div class="rh-brand">
+          <div class="rh-bm"><svg fill="none" stroke="white" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35M11 8v3l2 1.5"/></svg></div>
+          <span class="rh-bn">ARIA — WD Quality Agent</span>
+        </div>
+        <div class="rh-title">${D.problem||'Quality Issue Investigation'}</div>
+        <div class="rh-sub">${fromExcel?'Excel Data Analysis · ':''}Auto-generated RCA Report</div>
+      </div>
+      <div style="text-align:right">
+        <div class="rh-date">${dateStr}</div>
+        <div class="rh-stat">
+          <svg width="7" height="7" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="currentColor"/></svg>
+          Complete
+        </div>
+      </div>
+    </div>
+    <div class="rb">
+      <div class="kpi-row">
+        <div class="kpi-c"><div class="kpi-l">Yield Gap</div><div class="kpi-v bad">${(parseFloat(ex.uAvg)-parseFloat(ex.kAvg)).toFixed(2)}%</div><div class="kpi-ch">Unisteel vs Katayama</div></div>
+        <div class="kpi-c"><div class="kpi-l">Cost Impact</div><div class="kpi-v bad">~$2K/Q</div><div class="kpi-ch">Scrap + rework</div></div>
+        <div class="kpi-c"><div class="kpi-l">Time to RCA</div><div class="kpi-v ok">19 min</div><div class="kpi-ch">vs 3-5 days manual</div></div>
+      </div>
+      ${fromExcel?`<div class="rs"><div class="rs-t">Excel Data Summary</div><div class="rt"><strong>Source:</strong> ${D.problem}</div><div class="rt"><strong>Records Analyzed:</strong> ${ex.rows} rows · Avg Rate: ${ex.avgRate}% · Max: ${ex.maxRate||'2.01'}%</div></div>`:''}
+      <div class="rs">
+        <div class="rs-t">Investigation Findings</div>
+        <div class="fl">
+          <div class="fi"><div class="fin">1</div><div class="fit">Contact surface inspection shows <strong>Unisteel screw not achieving full contact</strong> with motor hub</div></div>
+          <div class="fi"><div class="fin">2</div><div class="fit">Dimension check: <strong>Fillet X, Y comparable</strong> between suppliers — dimension not root cause</div></div>
+          <div class="fi key"><div class="fin">3</div><div class="fit"><strong>Coning profile clear difference</strong> — Katayama has superior surface smoothness vs Unisteel asymmetric profile</div></div>
+        </div>
+      </div>
+      <div class="rs">
+        <div class="rs-t">Root Cause</div>
+        <div class="hb"><div class="hbl">Hypothesis</div><div class="hbt">Unisteel screw coning is not symmetric during fastening to motor hub with high fastening torque — causing top clamp, spacer, and disk rotation → Hyper balance fail</div></div>
+        <div class="rt" style="margin-top:8px"><strong>Root Cause:</strong> ขาด Supplier Qualification Process ที่รวม coning profile functional test</div>
+        <div class="rt"><strong>Under investigation:</strong> ME/SQE/Mech — CP.FW30</div>
+      </div>
+      <div class="rs">
+        <div class="rs-t">Action Plan</div>
+        <table class="at">
+          <tr><th>#</th><th>Action</th><th>Owner</th><th>Timeline</th><th>Priority</th></tr>
+          <tr><td><div class="can">C1</div></td><td>Control load 100% Katayama at P5 (~25% allocation)</td><td>SQE / Supply Chain</td><td>Done — FW32</td><td><span class="pt h">High</span></td></tr>
+          <tr><td><div class="can">C2</div></td><td>Add coning profile measurement to Incoming Inspection spec</td><td>ME Team</td><td>FW28</td><td><span class="pt h">High</span></td></tr>
+          <tr><td><div class="can">C3</div></td><td>Unisteel supplier improvement plan — CP.FW30</td><td>SQE</td><td>FW30</td><td><span class="pt m">Med</span></td></tr>
+          <tr><td><div class="can">C4</div></td><td>Update Supplier Qualification Control Plan</td><td>Process Eng</td><td>FW30</td><td><span class="pt m">Med</span></td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="rf">
+      <div class="rf-l">ARIA Auto-generated · WD AI Agent Challenge 2026 · ${dateStr}</div>
+      <div class="rf-acts">
+        <button class="rb2" onclick="exportHint('PDF')">
+          <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 16V4m0 12l-4-4m4 4l4-4M4 20h16"/></svg>Export PDF
+        </button>
+        <button class="rb2" onclick="exportHint('Word')">
+          <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>Word
+        </button>
+        <button class="rb2 pri" onclick="exportHint('Jira')">
+          <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/></svg>Send to Jira
+        </button>
+      </div>
+    </div>
+  </div>`;
 }
 
+/* ── Helpers ── */
+function addUser(t){
+  const c=document.getElementById('chat');
+  const d=document.createElement('div');
+  d.className='msg user';
+  d.innerHTML=`<div class="mav">W</div><div class="mbody"><div class="bub">${esc(t)}</div><div class="mt">${ts()}</div></div>`;
+  c.appendChild(d);scrollBottom();
+}
 
-/* =====================================
-   STATUS
-===================================== */
+function addAI(html){
+  const c=document.getElementById('chat');
+  const d=document.createElement('div');
+  d.className='msg ai';
+  d.innerHTML=`
+    <div class="mav"><svg fill="none" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35M11 8v3l2 1.5"/></svg></div>
+    <div class="mbody"><div class="bub">${html}</div><div class="mt">ARIA · ${ts()}</div></div>`;
+  c.appendChild(d);scrollBottom();
+}
 
-document
-.getElementById("caseNo")
-.addEventListener("input",function(){
+function doType(cb,ms=900){
+  busy=true;document.getElementById('snd').disabled=true;
+  const c=document.getElementById('chat');
+  const d=document.createElement('div');
+  d.className='msg ai';d.id='tdot';
+  d.innerHTML=`<div class="mav"><svg fill="none" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35M11 8v3l2 1.5"/></svg></div><div class="mbody"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  c.appendChild(d);scrollBottom();
+  setTimeout(()=>{
+    document.getElementById('tdot')?.remove();
+    busy=false;document.getElementById('snd').disabled=false;
+    cb();
+  },ms);
+}
 
-    document.getElementById(
-        "statusClaim"
-    ).innerText=this.value || "-";
+function setBadge(type,label){
+  const b=document.getElementById('tbb');
+  b.className=`tb-badge ${type}`;
+  b.innerHTML=`<svg width="6" height="6" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="currentColor"/></svg> ${label}`;
+}
 
-});
+function scrollBottom(){
+  const el=document.getElementById('cw');
+  setTimeout(()=>el.scrollTo({top:el.scrollHeight,behavior:'smooth'}),40);
+}
 
-
-/* =====================================
-   AUTO LOAD
-===================================== */
-
-window.addEventListener(
-    "load",
-    function(){
-
-        loadSignature();
-
-        const raw=
-        localStorage.getItem(
-        "claimFormData");
-
-        if(raw){
-
-            try{
-
-                const data=JSON.parse(raw);
-
-                document.getElementById(
-                    "statusClaim"
-                ).innerText=
-                    data.caseNo ||
-                    data.claimNo ||
-                    "-";
-
-            }catch(e){}
-
-        }
-
-    }
-);
-
+function newCase(){step=0;D={};started=false;excelData=null;location.reload()}
+function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}}
+function autoR(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,140)+'px'}
+function exportHint(type){addAI(`<p>${type} export เชื่อมต่อกับ WD QMS ครับ</p><p style="color:var(--dim);font-size:12px">PDF · Word · Jira · Email · Teams</p>`)}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 </script>
-
 </body>
 </html>
